@@ -5,48 +5,47 @@ services:
       context: .
     environment:
       MAX_REQUEST: "30"
-      TOKEN_BUCKET_RATE_PER_SECOND: "1"
+      TOKEN_BUCKET_RATE_PER_SECOND: "2"
     ports:
       - '8080:8080'
     volumes:
       - ./logs/:/logs/
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
     volumes:
-      - ./config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+      - loki-data:/loki
     healthcheck:
-      test: ["CMD", "curl", "-s", "-f", "http://localhost:9200/_cat/health"]
-      interval: 3s
-      timeout: 3s
-      retries: 10
-    ports:
-      - 9200:9200
-  logstash:
-    image: docker.elastic.co/logstash/logstash:7.11.0
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  promtail:
+    image: grafana/promtail:2.9.2
     volumes:
-      - ./config/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+      - ./logs:/var/log
+      - ./config/promtail.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
     ports:
-      - 5044:5044
-  filebeat:
-    image: docker.elastic.co/beats/filebeat:6.5.1
-    depends_on:
-      elasticsearch:
-        condition: service_healthy
+      - "3000:3000"
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     volumes:
-      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml
-      - ./logs/:/logs/
-  kibana:
-    image: docker.elastic.co/kibana/kibana:7.11.0
+      - grafana-data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-s", "-f", "http://localhost:5601/api/status"]
-      interval: 3s
-      timeout: 3s
-      retries: 50
-    ports:
-      - 5601:5601
+      - loki
+
+volumes:
+  loki-data:
+  grafana-data:

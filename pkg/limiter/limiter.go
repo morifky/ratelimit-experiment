@@ -2,22 +2,27 @@ package limiter
 
 import (
 	"sync"
-
-	"golang.org/x/time/rate"
 )
 
-var visitors = make(map[string]*rate.Limiter)
-var mu sync.Mutex
+type RateLimiter struct {
+	visitors map[string]*TokenBucket
+	mu       sync.Mutex
+}
 
-func GetVisitor(ip string, r rate.Limit, b int) *rate.Limiter {
-	mu.Lock()
-	defer mu.Unlock()
+func NewRateLimiter() *RateLimiter {
+	return &RateLimiter{
+		visitors: make(map[string]*TokenBucket),
+	}
+}
 
-	limiter, exist := visitors[ip]
+func (rl *RateLimiter) GetVisitor(ip string, rate float64, capacity float64) *TokenBucket {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
 
-	if !exist {
-		limiter = rate.NewLimiter(r, b)
-		visitors[ip] = limiter
+	limiter, exists := rl.visitors[ip]
+	if !exists {
+		limiter = NewTokenBucket(rate, capacity)
+		rl.visitors[ip] = limiter
 	}
 	return limiter
 }

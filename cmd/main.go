@@ -4,6 +4,7 @@ import (
 	"fmt"
 	server "ratelimit/pkg"
 	"ratelimit/pkg/config"
+	"ratelimit/pkg/limiter"
 	"strconv"
 
 	utils "ratelimit/utils"
@@ -22,7 +23,8 @@ func main() {
 
 	m, _ := strconv.Atoi(cfg.MaxRequest)
 	b, _ := strconv.Atoi(cfg.BucketToken)
-	s := server.New(m, b)
+	lim := limiter.NewRateLimiter()
+	s := server.New(m, b, lim)
 	s.InitRoutes()
 	s.Run(":" + cfg.HttpPort)
 }

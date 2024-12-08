@@ -16,12 +16,12 @@ docker-compose up -d
 
 ```
 bash generate_http_load.sh
-````
+```
 
-3. Kibana URL
+3. Grafana URL
 
 ```
-Localhost:5601
+Localhost:3000
 ```
 
 4. Cleanup
@@ -31,6 +31,6 @@ docker-compose down
 ```
 
 ## Rate limit configuration
-* MAX_REQUEST: maximum overall request rate
-* TOKEN_BUCKET_RATE_PER_SECOND: define the token bucket refill rate (r tokens per second)
 
+- MAX_REQUEST: maximum overall request rate
+- TOKEN_BUCKET_RATE_PER_SECOND: define the token bucket refill rate (r tokens per second)

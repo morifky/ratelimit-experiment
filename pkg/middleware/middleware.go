@@ -9,19 +9,18 @@ import (
 	response "ratelimit/utils"
 
 	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 )
 
-func SetMiddlewareRatelimit(next http.HandlerFunc, r rate.Limit, b int) http.HandlerFunc {
+func SetMiddlewareRatelimit(next http.HandlerFunc, rate float64, capacity float64, limiter *limiter.RateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, req *http.Request) {
 		ip, _, err := net.SplitHostPort(req.RemoteAddr)
 		if err != nil {
 			response.WriteError(w, http.StatusInternalServerError, errors.New("internal server error"))
 			return
 		}
-		limiter := limiter.GetVisitor(ip, r, b)
+		lim := limiter.GetVisitor(ip, rate, capacity)
 		zap.S().Info(fmt.Sprintf("client IP address= %v", ip))
-		if !limiter.Allow() {
+		if !lim.Allow() {
 			response.WriteError(w, http.StatusTooManyRequests, errors.New("too many requests"))
 			zap.S().Warn("too many requests")
 			return
